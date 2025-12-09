@@ -36,9 +36,9 @@ const NavItem = ({ icon: Icon, label, href, isActive }: NavItemProps) => {
     <NavLink
       to={href}
       className={cn(
-        "flex flex-col items-center justify-center p-1.5 rounded-lg transition-all duration-200 group relative min-w-[52px]",
+        "flex flex-col items-center justify-center p-1.5 rounded-xl transition-all duration-200 group relative min-w-[52px]",
         isActive
-          ? "bg-primary text-primary-foreground"
+          ? "bg-primary text-primary-foreground shadow-md shadow-primary/20"
           : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
       )}
     >
@@ -86,12 +86,12 @@ const Sidebar = ({ onClose }: { onClose?: () => void }) => {
   };
 
   return (
-    <aside className="fixed left-0 top-0 z-40 h-screen w-[68px] bg-sidebar border-r border-sidebar-border flex flex-col">
+    <aside className="fixed left-0 top-0 z-40 h-screen w-[68px] glass-sidebar flex flex-col">
       {/* Logo */}
-      <div className="flex items-center justify-center h-14 border-b border-sidebar-border relative">
+      <div className="flex items-center justify-center h-14 border-b border-sidebar-border/50 relative">
         <NavLink to="/dashboard" className="flex items-center justify-center">
-          <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center shrink-0">
-            <GraduationCap className="w-4 h-4 text-primary-foreground" />
+          <div className="w-9 h-9 rounded-xl gradient-primary flex items-center justify-center shrink-0 shadow-lg shadow-primary/20">
+            <GraduationCap className="w-5 h-5 text-primary-foreground" />
           </div>
         </NavLink>
         {onClose && (
@@ -121,7 +121,7 @@ const Sidebar = ({ onClose }: { onClose?: () => void }) => {
       </nav>
 
       {/* Bottom Navigation */}
-      <div className="border-t border-sidebar-border p-1.5">
+      <div className="border-t border-sidebar-border/50 p-1.5">
         <ul className="space-y-0.5">
           {bottomNavItems.map((item) => (
             <li key={item.label}>
@@ -136,7 +136,7 @@ const Sidebar = ({ onClose }: { onClose?: () => void }) => {
           <li>
             <NavLink
               to="/"
-              className="flex flex-col items-center justify-center p-1.5 rounded-lg text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-all duration-200 group"
+              className="flex flex-col items-center justify-center p-1.5 rounded-xl text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-all duration-200 group"
             >
               <LogOut className="w-4 h-4 shrink-0" />
               <span className="text-[9px] font-medium mt-0.5 opacity-0 group-hover:opacity-70 transition-opacity">
@@ -156,7 +156,7 @@ interface DashboardHeaderProps {
 
 const DashboardHeader = ({ onMenuClick }: DashboardHeaderProps) => {
   return (
-    <header className="sticky top-0 z-30 h-14 bg-card/80 backdrop-blur-xl border-b border-border flex items-center justify-between px-4 lg:px-6">
+    <header className="sticky top-0 z-30 h-14 glass-header flex items-center justify-between px-4 lg:px-6">
       <div className="flex items-center gap-4">
         <button
           onClick={onMenuClick}
@@ -169,7 +169,7 @@ const DashboardHeader = ({ onMenuClick }: DashboardHeaderProps) => {
           <input
             type="text"
             placeholder="Search students, teachers, classes..."
-            className="w-[280px] lg:w-[360px] h-9 pl-10 pr-4 rounded-lg bg-secondary border border-border text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+            className="w-[280px] lg:w-[360px] h-9 pl-10 pr-4 rounded-xl glass-input text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
           />
         </div>
       </div>
@@ -177,17 +177,17 @@ const DashboardHeader = ({ onMenuClick }: DashboardHeaderProps) => {
       <div className="flex items-center gap-1 sm:gap-2">
         <NavLink
           to="/dashboard/qr-scanner"
-          className="relative p-2 rounded-lg hover:bg-secondary transition-colors"
+          className="relative p-2 rounded-xl hover:bg-secondary transition-colors"
         >
           <QrCode className="w-5 h-5 text-muted-foreground" />
         </NavLink>
         <ThemeToggle />
-        <button className="relative p-2 rounded-lg hover:bg-secondary transition-colors">
+        <button className="relative p-2 rounded-xl hover:bg-secondary transition-colors">
           <Bell className="w-5 h-5 text-muted-foreground" />
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-destructive rounded-full" />
+          <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-destructive rounded-full animate-pulse" />
         </button>
-        <div className="flex items-center gap-2 sm:gap-3 pl-2 sm:pl-3 border-l border-border">
-          <div className="w-8 h-8 rounded-full gradient-primary flex items-center justify-center text-primary-foreground font-semibold text-xs">
+        <div className="flex items-center gap-2 sm:gap-3 pl-2 sm:pl-3 border-l border-border/50">
+          <div className="w-8 h-8 rounded-xl gradient-primary flex items-center justify-center text-primary-foreground font-semibold text-xs shadow-md shadow-primary/20">
             JK
           </div>
           <div className="hidden md:block">
@@ -233,9 +233,9 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       </div>
 
       {/* Main Content */}
-      <div className="lg:ml-[68px] transition-all duration-300">
+      <div className="lg:ml-[68px] transition-all duration-300 min-w-0">
         <DashboardHeader onMenuClick={() => setMobileMenuOpen(true)} />
-        <main className="p-4 lg:p-6">{children}</main>
+        <main className="p-4 lg:p-6 overflow-x-hidden">{children}</main>
       </div>
     </div>
   );

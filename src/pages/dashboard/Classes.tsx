@@ -1,6 +1,9 @@
-import { BookOpen, Plus, Users, GraduationCap } from "lucide-react";
+import { BookOpen, Plus, Users, GraduationCap, Eye, Edit } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
+import { useState } from "react";
+import { GlassDialog, FormField, FormInput, FormSelect, FormActions } from "@/components/ui/glass-dialog";
+import { useToast } from "@/hooks/use-toast";
 
 const classesData = [
   { name: "Form 1 Gold", students: 42, teacher: "Mrs. Grace Osei", room: "Block A - Room 101" },
@@ -12,6 +15,11 @@ const classesData = [
 ];
 
 const Classes = () => {
+  const [isAddClassOpen, setIsAddClassOpen] = useState(false);
+  const [isViewClassOpen, setIsViewClassOpen] = useState(false);
+  const [selectedClass, setSelectedClass] = useState<typeof classesData[0] | null>(null);
+  const { toast } = useToast();
+
   return (
     <DashboardLayout>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
@@ -19,7 +27,7 @@ const Classes = () => {
           <h1 className="text-2xl font-bold text-foreground">Classes</h1>
           <p className="text-muted-foreground">Manage classes and student assignments</p>
         </div>
-        <Button variant="hero">
+        <Button variant="hero" onClick={() => setIsAddClassOpen(true)}>
           <Plus className="w-4 h-4 mr-2" />
           Add Class
         </Button>
@@ -28,13 +36,13 @@ const Classes = () => {
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
         {[
-          { label: "Total Classes", value: "18", icon: BookOpen, color: "bg-primary/10 text-primary" },
-          { label: "Total Students", value: "1,247", icon: Users, color: "bg-violet-100 text-violet-600" },
-          { label: "Class Teachers", value: "18", icon: GraduationCap, color: "bg-emerald-100 text-emerald-600" },
+          { label: "Total Classes", value: "18", icon: BookOpen, color: "text-primary" },
+          { label: "Total Students", value: "1,247", icon: Users, color: "text-info" },
+          { label: "Class Teachers", value: "18", icon: GraduationCap, color: "text-success" },
         ].map((stat) => (
-          <div key={stat.label} className="glass-card rounded-xl p-5 flex items-center gap-4">
-            <div className={`w-12 h-12 rounded-xl ${stat.color} flex items-center justify-center`}>
-              <stat.icon className="w-6 h-6" />
+          <div key={stat.label} className="glass-card rounded-2xl p-5 flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+              <stat.icon className={`w-6 h-6 ${stat.color}`} />
             </div>
             <div>
               <p className="text-sm text-muted-foreground">{stat.label}</p>
@@ -47,17 +55,16 @@ const Classes = () => {
       {/* Classes Grid */}
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
         {classesData.map((cls) => (
-          <div key={cls.name} className="glass-card rounded-xl p-5 hover:shadow-card-hover transition-all group">
+          <div key={cls.name} className="glass-card rounded-2xl p-5 group">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center group-hover:scale-110 transition-transform">
                 <BookOpen className="w-6 h-6 text-primary" />
               </div>
-              <div>
+              <div className="flex-1">
                 <h3 className="font-semibold text-foreground">{cls.name}</h3>
                 <p className="text-sm text-muted-foreground">{cls.room}</p>
               </div>
             </div>
-            
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -74,13 +81,48 @@ const Classes = () => {
                 <span className="text-sm text-foreground">{cls.teacher}</span>
               </div>
             </div>
-
-            <Button variant="outline" className="w-full mt-4 glass-button">
+            <Button variant="glass" className="w-full mt-4" onClick={() => { setSelectedClass(cls); setIsViewClassOpen(true); }}>
               View Details
             </Button>
           </div>
         ))}
       </div>
+
+      {/* Add Class Dialog */}
+      <GlassDialog open={isAddClassOpen} onOpenChange={setIsAddClassOpen} title="Add New Class" size="md">
+        <form onSubmit={(e) => { e.preventDefault(); toast({ title: "Class Added" }); setIsAddClassOpen(false); }} className="space-y-4">
+          <FormField label="Class Name" required><FormInput placeholder="e.g., Form 1 Gold" required /></FormField>
+          <FormField label="Class Teacher" required>
+            <FormSelect required>
+              <option value="">Select teacher</option>
+              <option value="t1">Mr. Emmanuel Adjei</option>
+              <option value="t2">Mrs. Grace Osei</option>
+            </FormSelect>
+          </FormField>
+          <FormField label="Room"><FormInput placeholder="e.g., Block A - Room 101" /></FormField>
+          <FormActions>
+            <Button type="button" variant="ghost" onClick={() => setIsAddClassOpen(false)}>Cancel</Button>
+            <Button type="submit" variant="hero">Add Class</Button>
+          </FormActions>
+        </form>
+      </GlassDialog>
+
+      {/* View Class Dialog */}
+      <GlassDialog open={isViewClassOpen} onOpenChange={setIsViewClassOpen} title={selectedClass?.name || "Class Details"} size="md">
+        {selectedClass && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="p-4 rounded-xl bg-secondary/50"><p className="text-xs text-muted-foreground">Students</p><p className="text-xl font-bold">{selectedClass.students}</p></div>
+              <div className="p-4 rounded-xl bg-secondary/50"><p className="text-xs text-muted-foreground">Room</p><p className="font-medium">{selectedClass.room}</p></div>
+            </div>
+            <div className="p-4 rounded-xl bg-secondary/50"><p className="text-xs text-muted-foreground">Class Teacher</p><p className="font-medium">{selectedClass.teacher}</p></div>
+            <FormActions>
+              <Button variant="ghost" onClick={() => setIsViewClassOpen(false)}>Close</Button>
+              <Button variant="hero">Edit Class</Button>
+            </FormActions>
+          </div>
+        )}
+      </GlassDialog>
     </DashboardLayout>
   );
 };
