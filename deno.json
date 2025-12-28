@@ -1,0 +1,13 @@
+{
+  "tasks": {
+    "dev": "deno run --allow-all supabase/functions/create-teacher/index.ts"
+  },
+  "imports": {
+    "@supabase/supabase-js": "npm:@supabase/supabase-js@2"
+  },
+  "compilerOptions": {
+    "lib": ["deno.window", "deno.unstable"],
+    "jsx": "react-jsx",
+    "jsxImportSource": "https://esm.sh/preact"
+  }
+}
