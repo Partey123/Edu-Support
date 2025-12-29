@@ -25,6 +25,7 @@ import {
   BookOpen,
   Calendar,
   Video,
+  Code,
 } from "lucide-react";
 
 export type UserRole = "super-admin" | "school-admin" | "teacher" | "parent";
@@ -36,13 +37,14 @@ interface NavItem {
 }
 
 export const navItems: Record<UserRole, NavItem[]> = {
-"super-admin": [
-  { title: "Dashboard", href: "/super-admin/dashboard", icon: LayoutDashboard },
-  { title: "Schools", href: "/super-admin/schools", icon: Building },
-  { title: "Subscriptions", href: "/super-admin/plans", icon: CreditCard }, 
-  { title: "Analytics", href: "/super-admin/analytics", icon: BarChart3 },
-  { title: "Settings", href: "/super-admin/settings", icon: Settings },
-],
+  "super-admin": [
+    { title: "Dashboard", href: "/super-admin/dashboard", icon: LayoutDashboard },
+    { title: "Schools", href: "/super-admin/schools", icon: Building },
+    { title: "Subscriptions", href: "/super-admin/plans", icon: CreditCard },
+    { title: "Codes", href: "/super-admin/codes", icon: Code },
+    { title: "Analytics", href: "/super-admin/analytics", icon: BarChart3 },
+    { title: "Settings", href: "/super-admin/settings", icon: Settings },
+  ],
   "school-admin": [
     { title: "Dashboard", href: "/school-admin/dashboard", icon: LayoutDashboard },
     { title: "Students", href: "/school-admin/students", icon: Users },
@@ -88,6 +90,12 @@ export function DashboardHeader({ role, schoolName = "Your School" }: DashboardH
   const location = useLocation();
   const items = navItems[role];
 
+  // Safety check for items
+  if (!items) {
+    console.error(`Navigation items not found for role: ${role}`);
+    return null;
+  }
+
   const userName = profile 
     ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email
     : 'User';
@@ -109,7 +117,7 @@ export function DashboardHeader({ role, schoolName = "Your School" }: DashboardH
 
           {/* Center - Navigation (Desktop only) */}
           <nav className="hidden lg:flex items-center gap-1">
-            {items.map((item) => {
+            {items && items.map((item) => {
               const isActive = location.pathname === item.href || location.pathname.startsWith(item.href + "/");
               return (
                 <Link

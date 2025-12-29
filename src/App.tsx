@@ -6,6 +6,9 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
+import { UserPresenceProvider } from "@/contexts/UserPresenceContext";
+import { VideoStreamProvider } from "@/contexts/VideoStreamContext";
+import { VirtualClassProvider } from "@/contexts/VirtualClassContext";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
@@ -25,6 +28,7 @@ import AnalyticsPage from "./pages/super-admin/Analytics";
 import SuperAdminSettingsPage from "./pages/super-admin/Settings";
 import PlansPage from "./pages/super-admin/Plans";
 import PlanDetail from "./pages/super-admin/PlanDetail";
+import CodesPage from "./pages/super-admin/Codes";
 
 // School Admin Pages
 import SchoolAdminDashboard from "./pages/school-admin/Dashboard";
@@ -58,7 +62,9 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <AuthProvider>
-            <Routes>
+            <UserPresenceProvider>
+              <VideoStreamProvider>
+                <Routes>
               {/* Public Routes */}
               <Route path="/" element={<Index />} />
               <Route path="/login" element={<Login />} />
@@ -111,6 +117,11 @@ const App = () => (
               <Route path="/super-admin/plans/:id" element={
                 <ProtectedRoute allowedRoles={['super_admin']}>
                   <PlanDetail />
+                </ProtectedRoute>
+              } />
+              <Route path="/super-admin/codes" element={
+                <ProtectedRoute allowedRoles={['super_admin']}>
+                  <CodesPage />
                 </ProtectedRoute>
               } />
 
@@ -233,6 +244,8 @@ const App = () => (
               {/* Catch-all */}
               <Route path="*" element={<NotFound />} />
             </Routes>
+              </VideoStreamProvider>
+            </UserPresenceProvider>
           </AuthProvider>
         </BrowserRouter>
       </TooltipProvider>
