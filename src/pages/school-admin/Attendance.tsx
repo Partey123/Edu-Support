@@ -1,8 +1,18 @@
-import { useState } from "react";
-import { Calendar, CheckCircle, XCircle, Clock, AlertCircle, Users, Download } from "lucide-react";
+import { useState, useEffect } from "react";
+import {
+  Calendar,
+  CheckCircle,
+  XCircle,
+  Clock,
+  AlertCircle,
+  Users,
+  Download,
+  Loader2,
+} from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useAuth } from "@/hooks/useAuth";
 import {
   Select,
   SelectContent,
@@ -11,27 +21,159 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { supabase } from "@/integrations/supabase/client";
 
-const classes = ["Basic 6A", "Basic 6B", "Basic 5A", "Basic 5B", "Basic 4A", "Basic 4B"];
+interface AttendanceRecord {
+  date: string;
+  present: number;
+  absent: number;
+  late: number;
+  total: number;
+}
 
-const attendanceData = [
-  { date: "2025-12-26", present: 32, absent: 2, late: 1, total: 35 },
-  { date: "2025-12-25", present: 33, absent: 1, late: 1, total: 35 },
-  { date: "2025-12-24", present: 30, absent: 3, late: 2, total: 35 },
-  { date: "2025-12-23", present: 34, absent: 1, late: 0, total: 35 },
-  { date: "2025-12-22", present: 31, absent: 2, late: 2, total: 35 },
-];
-
-const weeklyStats = {
-  averageAttendance: 92.5,
-  totalPresent: 160,
-  totalAbsent: 9,
-  totalLate: 6,
-};
+interface WeeklyStats {
+  averageAttendance: number;
+  totalPresent: number;
+  totalAbsent: number;
+  totalLate: number;
+}
 
 export default function AttendancePage() {
-  const [selectedClass, setSelectedClass] = useState("Basic 6A");
-  const [selectedDate, setSelectedDate] = useState("2025-12-26");
+  const { schoolId } = useAuth();
+  const [classes, setClasses] = useState<any[]>([]);
+  const [selectedClass, setSelectedClass] = useState("");
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0]);
+  const [attendanceData, setAttendanceData] = useState<AttendanceRecord[]>([]);
+  const [weeklyStats, setWeeklyStats] = useState<WeeklyStats>({
+    averageAttendance: 0,
+    totalPresent: 0,
+    totalAbsent: 0,
+    totalLate: 0,
+  });
+  const [loading, setLoading] = useState(false);
+
+  // Fetch classes on mount
+  useEffect(() => {
+    if (schoolId) {
+      fetchClasses();
+    }
+  }, [schoolId]);
+
+  // Fetch attendance data when class changes
+  useEffect(() => {
+    if (selectedClass && schoolId) {
+      fetchAttendanceData();
+    }
+  }, [selectedClass, schoolId]);
+
+  const fetchClasses = async () => {
+    try {
+      const { data: currentTerm } = await supabase
+        .from("academic_terms")
+        .select("id")
+        .eq("school_id", schoolId!)
+        .eq("is_current", true)
+        .single();
+
+      const termId = currentTerm?.id;
+
+      const { data, error } = await supabase
+        .from("classes")
+        .select("id, name, level, section")
+        .eq("school_id", schoolId!)
+        .eq("academic_term_id", termId)
+        .order("name");
+
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        setClasses(data);
+        setSelectedClass(data[0].id);
+      }
+    } catch (error) {
+      console.error("Error fetching classes:", error);
+    }
+  };
+
+  const fetchAttendanceData = async () => {
+    try {
+      setLoading(true);
+
+      // Get the past 7 days of attendance for the selected class
+      const sevenDaysAgo = new Date();
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+      const { data: attendanceRecords, error } = await supabase
+        .from("attendance")
+        .select("date, status")
+        .eq("class_id", selectedClass)
+        .gte("date", sevenDaysAgo.toISOString().split("T")[0])
+        .order("date", { ascending: false });
+
+      if (error) throw error;
+
+      // Get class enrollment count for total students
+      const { data: enrollments } = await supabase
+        .from("enrollments")
+        .select("id")
+        .eq("class_id", selectedClass)
+        .eq("status", "active");
+
+      const totalStudents = enrollments?.length || 0;
+
+      // Group attendance by date
+      const groupedData: Record<string, Record<string, number>> = {};
+
+      attendanceRecords?.forEach((record: any) => {
+        if (!groupedData[record.date]) {
+          groupedData[record.date] = { present: 0, absent: 0, late: 0 };
+        }
+        if (record.status === "present") groupedData[record.date].present++;
+        else if (record.status === "absent") groupedData[record.date].absent++;
+        else if (record.status === "late") groupedData[record.date].late++;
+      });
+
+      // Format for display
+      const formattedData: AttendanceRecord[] = Object.entries(groupedData).map(
+        ([date, counts]) => ({
+          date,
+          present: counts.present,
+          absent: counts.absent,
+          late: counts.late,
+          total: totalStudents,
+        })
+      );
+
+      setAttendanceData(formattedData);
+
+      // Calculate weekly stats
+      let totalPresent = 0,
+        totalAbsent = 0,
+        totalLate = 0,
+        daysRecorded = 0;
+
+      formattedData.forEach((record) => {
+        totalPresent += record.present;
+        totalAbsent += record.absent;
+        totalLate += record.late;
+        if (record.present + record.absent + record.late > 0) daysRecorded++;
+      });
+
+      const avgAttendance =
+        daysRecorded > 0 ? Math.round((totalPresent / (daysRecorded * totalStudents)) * 100) : 0;
+
+      setWeeklyStats({
+        averageAttendance: avgAttendance,
+        totalPresent,
+        totalAbsent,
+        totalLate,
+      });
+    } catch (error) {
+      console.error("Error fetching attendance data:", error);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   const getAttendanceColor = (rate: number) => {
     if (rate >= 95) return "text-success";
@@ -39,8 +181,10 @@ export default function AttendancePage() {
     return "text-destructive";
   };
 
+  const selectedClassName = classes.find((c) => c.id === selectedClass)?.name || "";
+
   return (
-    <DashboardLayout role="school-admin" schoolName="Bright Future Basic School">
+    <DashboardLayout role="school-admin">
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
         <div>
@@ -62,7 +206,9 @@ export default function AttendancePage() {
             </SelectTrigger>
             <SelectContent>
               {classes.map((cls) => (
-                <SelectItem key={cls} value={cls}>{cls}</SelectItem>
+                <SelectItem key={cls.id} value={cls.id}>
+                  {cls.name} - {cls.level}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -138,25 +284,32 @@ export default function AttendancePage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Calendar className="h-5 w-5" />
-            Recent Attendance - {selectedClass}
+            Recent Attendance - {selectedClassName}
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-border">
-                  <th className="text-left pb-3 text-sm font-semibold text-muted-foreground">Date</th>
-                  <th className="text-left pb-3 text-sm font-semibold text-muted-foreground">Present</th>
-                  <th className="text-left pb-3 text-sm font-semibold text-muted-foreground">Absent</th>
-                  <th className="text-left pb-3 text-sm font-semibold text-muted-foreground">Late</th>
-                  <th className="text-left pb-3 text-sm font-semibold text-muted-foreground">Rate</th>
-                  <th className="text-left pb-3 text-sm font-semibold text-muted-foreground">Status</th>
+          {loading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : attendanceData.length === 0 ? (
+            <p className="text-center text-muted-foreground py-8">No attendance records found</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-border">
+                    <th className="text-left pb-3 text-sm font-semibold text-muted-foreground">Date</th>
+                    <th className="text-left pb-3 text-sm font-semibold text-muted-foreground">Present</th>
+                    <th className="text-left pb-3 text-sm font-semibold text-muted-foreground">Absent</th>
+                    <th className="text-left pb-3 text-sm font-semibold text-muted-foreground">Late</th>
+                    <th className="text-left pb-3 text-sm font-semibold text-muted-foreground">Rate</th>
+                    <th className="text-left pb-3 text-sm font-semibold text-muted-foreground">Status</th>
                 </tr>
               </thead>
               <tbody>
                 {attendanceData.map((record) => {
-                  const rate = Math.round((record.present / record.total) * 100);
+                  const rate = record.total > 0 ? Math.round((record.present / record.total) * 100) : 0;
                   return (
                     <tr key={record.date} className="border-b border-border last:border-0">
                       <td className="py-4">
@@ -199,22 +352,25 @@ export default function AttendancePage() {
                 })}
               </tbody>
             </table>
-          </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
       {/* Alert for Low Attendance */}
+      {weeklyStats.totalAbsent > 0 && (
       <div className="mt-6 p-4 bg-warning/10 rounded-xl border border-warning/20">
         <div className="flex items-start gap-3">
           <AlertCircle className="h-5 w-5 text-warning mt-0.5" />
           <div>
             <p className="font-medium text-foreground">Attendance Alert</p>
             <p className="text-sm text-muted-foreground mt-1">
-              3 students in {selectedClass} have attendance below 80% this term. Consider reaching out to their parents.
+              {weeklyStats.totalAbsent} absence(s) recorded this week in {selectedClassName}. Consider reaching out to parents.
             </p>
           </div>
         </div>
       </div>
+      )}
     </DashboardLayout>
   );
 }

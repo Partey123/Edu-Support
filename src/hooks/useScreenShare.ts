@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { AgoraService } from "../services/agoraService";
+import AgoraService from "../services/agoraService";
 
 interface ScreenShareState {
   isSharing: boolean;

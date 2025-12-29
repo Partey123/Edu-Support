@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Plus, Search, Users, BookOpen, MoreVertical, Eye, Edit, Trash2, Loader2 } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
@@ -44,6 +45,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
 export default function ClassesPage() {
+  const navigate = useNavigate();
   const { profile, schoolId } = useAuth();
   const { data: classes = [], isLoading } = useClasses();
   const { data: teachers = [] } = useTeachers();
@@ -339,7 +341,7 @@ export default function ClassesPage() {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate(`/school-admin/classes/${cls.id}`)}>
                       <Eye className="h-4 w-4 mr-2" />
                       View Details
                     </DropdownMenuItem>

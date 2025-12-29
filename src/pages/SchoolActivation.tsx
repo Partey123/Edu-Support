@@ -175,6 +175,14 @@ export default function SchoolActivation() {
 
       if (subError) throw subError;
 
+      // IMPORTANT: Set school as active (same as manual admin activation)
+      const { error: schoolUpdateError } = await supabase
+        .from('schools')
+        .update({ is_active: true })
+        .eq('id', schoolInfo.id);
+
+      if (schoolUpdateError) throw schoolUpdateError;
+
       // Mark code as used
       await supabase
         .from('school_activation_codes')

@@ -88,13 +88,7 @@ export function DashboardHeader({ role, schoolName = "Your School" }: DashboardH
   const { profile, signOut } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const items = navItems[role];
-
-  // Safety check for items
-  if (!items) {
-    console.error(`Navigation items not found for role: ${role}`);
-    return null;
-  }
+  const items = navItems[role] || [];
 
   const userName = profile 
     ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || profile.email
@@ -106,10 +100,12 @@ export function DashboardHeader({ role, schoolName = "Your School" }: DashboardH
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full bg-card border-b border-border">
+    <header className="sticky top-0 z-50 w-full bg-card border-b border-border"
+      style={{ minHeight: '64px' }}>
       <div className="flex h-16 items-center justify-between px-4 lg:px-6">
-          {/* Left - App Name */}
+          {/* Left - App Logo and Name */}
           <Link to={`/${role}/dashboard`} className="flex items-center gap-2">
+            <img src="/favicon.svg" alt="EduSupport" className="h-8 w-8 hidden sm:block" />
             <span className="font-display text-xl font-bold text-foreground tracking-tight">
               Edu<span className="text-primary">Support</span>
             </span>

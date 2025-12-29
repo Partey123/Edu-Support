@@ -556,14 +556,37 @@ export function useClasses() {
 
       if (error) throw error;
 
-      // For now, estimate student counts (can be enhanced later with actual enrollment data)
-      return data.map((c) => ({
-        ...c,
-        student_count: 0, // TODO: fetch from enrollments when available
-      })) as Class[];
+      // Fetch student counts from enrollments
+      const classesWithCounts = await Promise.all(
+        data.map(async (cls) => {
+          const { count } = await supabase
+            .from("enrollments")
+            .select("id", { count: "exact" })
+            .eq("class_id", cls.id)
+            .eq("status", "active");
+
+          return {
+            ...cls,
+            student_count: count || 0,
+          };
+        }),
+      );
+
+      return classesWithCounts as Class[];
     },
     enabled: !!schoolId,
   });
+}
+
+export function useRefreshClasses() {
+  const { schoolId } = useAuth();
+  const queryClient = useQueryClient();
+
+  return {
+    refreshClasses: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["classes", schoolId] });
+    },
+  };
 }
 
 export function useCreateClass() {

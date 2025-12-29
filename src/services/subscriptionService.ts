@@ -147,18 +147,6 @@ class SubscriptionService {
   }
 
   /**
-   * Check if school can perform action based on subscription limits
-   * NOTE: This requires school_subscriptions table to be added to Supabase
-   */
-  async checkLimit(
-    schoolId: string,
-    resource: "student" | "teacher" | "class",
-  ): Promise<boolean> {
-    console.warn("checkLimit: school_subscriptions table not configured");
-    return true; // Allow by default
-  }
-
-  /**
    * Update usage counts for a school subscription
    * NOTE: This requires school_subscriptions table to be added to Supabase
    */
@@ -213,6 +201,60 @@ class SubscriptionService {
       .eq("school_id", schoolId)
       .is("deleted_at", null);
     return count || 0;
+  }
+
+  /**
+   * ✅ FIXED: Check if school has reached resource limit for their plan
+   * This method was called by useSubscription hook but didn't exist
+   */
+  async checkLimit(
+    schoolId: string,
+    resource: "student" | "teacher" | "class",
+  ): Promise<boolean> {
+    try {
+      const subscription = await this.getSchoolSubscription(schoolId);
+
+      if (!subscription?.plan) {
+        console.warn(
+          `No subscription for school ${schoolId}, allowing by default`,
+        );
+        return true;
+      }
+
+      const limitMap: Record<string, string> = {
+        student: "max_students",
+        teacher: "max_teachers",
+        class: "max_classes",
+      };
+
+      const limitField = limitMap[resource];
+      const maxLimit = (subscription.plan as any)[limitField] as number || 999;
+
+      const { count, error } = await supabase
+        .from(`${resource}s`)
+        .select("id", { count: "exact", head: true })
+        .eq("school_id", schoolId)
+        .is("deleted_at", null);
+
+      if (error) {
+        console.error(`Error counting ${resource}s:`, error);
+        return true;
+      }
+
+      const currentCount = count || 0;
+      const canAdd = currentCount < maxLimit;
+
+      console.log(
+        `Limit check: ${resource} ${currentCount}/${maxLimit} - ${
+          canAdd ? "✅ Can add" : "❌ At limit"
+        }`,
+      );
+
+      return canAdd;
+    } catch (error) {
+      console.error(`Error checking ${resource} limit:`, error);
+      return true;
+    }
   }
 }
 

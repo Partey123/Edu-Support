@@ -24,9 +24,12 @@ export function BottomNav({ role, items }: BottomNavProps) {
   const navigate = useNavigate();
   const { signOut } = useAuth();
 
+  // Safety check - ensure items is an array
+  const navItems = Array.isArray(items) ? items : [];
+
   // Show first 3 items in the bottom bar, rest in overflow menu
-  const visibleItems = items.slice(0, 3);
-  const overflowItems = items.slice(3);
+  const visibleItems = navItems.slice(0, 3);
+  const overflowItems = navItems.slice(3);
   const hasOverflow = overflowItems.length > 0;
 
   const handleSignOut = async () => {
@@ -135,7 +138,7 @@ export function BottomNav({ role, items }: BottomNavProps) {
 
       {/* Bottom Navigation Bar */}
       <nav className="fixed bottom-0 left-0 right-0 z-50 lg:hidden bg-card border-t border-border">
-        <div className="flex items-center justify-around px-2 py-2">
+        <div className="flex items-center justify-around px-2 py-3">
           {visibleItems.map((item) => {
             const isActive = location.pathname === item.href || location.pathname.startsWith(item.href + "/");
             return (

@@ -19,9 +19,9 @@ export class TokenService {
   private static readonly TOKEN_REFRESH_BUFFER = 300; // 5 minutes before expiry
 
   /**
-   * Generate Agora token for use when Primary Certificate is DISABLED in Agora Console
-   * ⚠️ This only works with certificate disabled - no actual token validation
-   * For production: Re-enable certificate and use backend token generation
+   * Generate Agora token - NOW WITH PRODUCTION SECURITY!
+   * ✅ FIXED: Uses actual token generation via backend API
+   * ⚠️ Requires: /api/agora-token backend endpoint
    */
   static async generateToken(request: TokenRequest): Promise<TokenResponse> {
     const cacheKey = `${request.channelName}-${request.uid}-${request.role}`;
@@ -49,19 +49,37 @@ export class TokenService {
         }`,
       );
 
-      // When certificate is disabled in Agora Console, we can use null token
-      const token = null;
-      const expirationTime = request.expirationTimeInSeconds || 86400; // 24 hours
+      // ✅ FIXED: Call backend API to generate secure token
+      const response = await fetch("/api/agora-token", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          channelName: request.channelName,
+          uid: request.uid,
+          role: request.role,
+          expirationTimeInSeconds: request.expirationTimeInSeconds || 86400, // 24 hours
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Token generation failed: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      const token = data.token; // ✅ Real token from backend
+      const expirationTime = request.expirationTimeInSeconds || 86400;
       const expiresAt = new Date(Date.now() + expirationTime * 1000);
 
-      // Cache the null token
+      // Cache the token
       this.tokenCache.set(cacheKey, {
         token,
         expiresAt,
       });
 
       console.log(
-        `✅ Token request created for channel: ${request.channelName} (certificate disabled mode)`,
+        `✅ Token generated for channel: ${request.channelName}`,
       );
 
       return {
@@ -101,34 +119,9 @@ export class TokenService {
       return;
     }
 
-    // Clear specific token
-    const keysToDelete: string[] = [];
-    this.tokenCache.forEach((_, key) => {
-      if (key.startsWith(`${channelName}-${uid}`)) {
-        keysToDelete.push(key);
-      }
-    });
-
-    keysToDelete.forEach((key) => this.tokenCache.delete(key));
-    console.log(`🧹 Token cache cleared for ${channelName}-${uid}`);
-  }
-
-  /**
-   * Check if token is about to expire
-   */
-  static isTokenExpiringSoon(
-    channelName: string,
-    uid: number,
-  ): boolean {
-    const cacheKey = `${channelName}-${uid}-subscriber`;
-    const cached = this.tokenCache.get(cacheKey);
-
-    if (!cached) {
-      return true; // Token not cached, treat as expired
-    }
-
-    const timeUntilExpiry = cached.expiresAt.getTime() - Date.now();
-    return timeUntilExpiry < this.TOKEN_REFRESH_BUFFER * 1000;
+    const cacheKey = `${channelName}-${uid}`;
+    this.tokenCache.delete(cacheKey);
+    console.log(`🧹 Cleared cache for ${cacheKey}`);
   }
 }
 

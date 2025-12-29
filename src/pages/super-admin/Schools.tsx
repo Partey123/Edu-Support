@@ -97,6 +97,33 @@ export default function SchoolsPage() {
     }
   };
 
+  const handleToggleStatus = async (schoolId: string, currentStatus: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('schools')
+        .update({ is_active: !currentStatus })
+        .eq('id', schoolId);
+
+      if (error) throw error;
+
+      setSchools(schools.map(s => 
+        s.id === schoolId ? { ...s, is_active: !currentStatus } : s
+      ));
+
+      toast({
+        title: 'Success',
+        description: `School ${!currentStatus ? 'activated' : 'deactivated'} successfully`
+      });
+    } catch (error) {
+      console.error('Error toggling school status:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update school status',
+        variant: 'destructive'
+      });
+    }
+  };
+
   const handleDeleteSchool = async (schoolId: string) => {
     if (!confirm('Are you sure you want to delete this school? This action cannot be undone.')) {
       return;
@@ -285,6 +312,21 @@ export default function SchoolsPage() {
                               <Edit className="h-4 w-4 mr-2" />
                               Edit
                             </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            onClick={() => handleToggleStatus(school.id, school.is_active)}
+                          >
+                            {school.is_active ? (
+                              <>
+                                <XCircle className="h-4 w-4 mr-2" />
+                                Deactivate
+                              </>
+                            ) : (
+                              <>
+                                <CheckCircle className="h-4 w-4 mr-2" />
+                                Activate
+                              </>
+                            )}
                           </DropdownMenuItem>
                           <DropdownMenuItem 
                             className="text-destructive"

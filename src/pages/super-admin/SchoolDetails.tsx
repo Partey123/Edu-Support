@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ArrowLeft, Building, Users, GraduationCap, Mail, Phone, MapPin, Calendar, Edit, Trash2 } from "lucide-react";
+import { ArrowLeft, Building, Users, GraduationCap, Mail, Phone, MapPin, Calendar, Edit, Trash2, Clock, Zap } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -7,6 +7,12 @@ import { Link, useParams, useNavigate } from "react-router-dom";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { SubscriptionTimerDisplay } from "@/components/subscription/SubscriptionTimerDisplay";
+import { ExtendSubscriptionModal } from "@/components/subscription/ExtendSubscriptionModal";
+import { TerminateSubscriptionModal } from "@/components/subscription/TerminateSubscriptionModal";
+import { useSubscriptionTimer } from "@/hooks/useSubscriptionTimer";
+import { getSubscriptionHistory } from "@/services/subscriptionTimerService";
 
 interface School {
   id: string;
@@ -33,6 +39,17 @@ interface SchoolAdmin {
   phone: string | null;
 }
 
+interface SubscriptionHistoryEntry {
+  id: number;
+  action_type: string;
+  previous_end_date: string | null;
+  new_end_date: string | null;
+  days_added: number | null;
+  code_used: string | null;
+  termination_reason: string | null;
+  created_at: string;
+}
+
 export default function SchoolDetailsPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -41,6 +58,12 @@ export default function SchoolDetailsPage() {
   const [stats, setStats] = useState<SchoolStats>({ students: 0, teachers: 0, classes: 0 });
   const [admin, setAdmin] = useState<SchoolAdmin | null>(null);
   const [loading, setLoading] = useState(true);
+  const [subscriptionHistory, setSubscriptionHistory] = useState<SubscriptionHistoryEntry[]>([]);
+  const [extendModalOpen, setExtendModalOpen] = useState(false);
+  const [terminateModalOpen, setTerminateModalOpen] = useState(false);
+
+  // Subscription timer hook
+  const { timeRemaining, subscriptionStatus, endDate, isLoading: timerLoading, refetch: refetchTimer } = useSubscriptionTimer(id || '');
 
   useEffect(() => {
     if (id) {
@@ -109,6 +132,10 @@ export default function SchoolDetailsPage() {
           setAdmin(profileData);
         }
       }
+
+      // Fetch subscription history
+      const history = await getSubscriptionHistory(id!);
+      setSubscriptionHistory(history);
     } catch (error) {
       console.error('Error fetching school data:', error);
       toast({
@@ -219,6 +246,13 @@ export default function SchoolDetailsPage() {
               Edit School
             </Link>
           </Button>
+          <Button variant="outline" onClick={() => setExtendModalOpen(true)}>
+            <Zap className="h-4 w-4" />
+            Extend Subscription
+          </Button>
+          <Button variant="destructive" onClick={() => setTerminateModalOpen(true)}>
+            Terminate
+          </Button>
           <Button variant="destructive" onClick={handleDeleteSchool}>
             <Trash2 className="h-4 w-4" />
             Delete
@@ -248,6 +282,17 @@ export default function SchoolDetailsPage() {
           change="All levels"
           changeType="neutral"
           icon={Building}
+        />
+      </div>
+
+      {/* Subscription Timer Section */}
+      <div className="mb-8">
+        <SubscriptionTimerDisplay
+          timeRemaining={timeRemaining}
+          status={subscriptionStatus}
+          endDate={endDate}
+          isTerminated={subscriptionStatus === 'terminated'}
+          isLoading={timerLoading}
         />
       </div>
 
@@ -328,6 +373,68 @@ export default function SchoolDetailsPage() {
               </div>
             </div>
           )}
+
+          {/* Subscription History */}
+          <div className="bg-card p-6 rounded-2xl border border-border">
+            <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+              <Clock className="h-5 w-5" />
+              Subscription History
+            </h2>
+            {subscriptionHistory.length === 0 ? (
+              <p className="text-muted-foreground text-center py-8">No subscription history yet</p>
+            ) : (
+              <div className="space-y-3 max-h-96 overflow-y-auto">
+                {subscriptionHistory.map((entry) => (
+                  <div key={entry.id} className="border border-border rounded-lg p-4">
+                    <div className="flex justify-between items-start mb-2">
+                      <div className="font-semibold text-foreground capitalize">
+                        {entry.action_type.replace('_', ' ')}
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        {new Date(entry.created_at).toLocaleDateString()}
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      {entry.previous_end_date && (
+                        <div>
+                          <span className="text-muted-foreground">From:</span>
+                          <div className="font-medium">
+                            {new Date(entry.previous_end_date).toLocaleDateString()}
+                          </div>
+                        </div>
+                      )}
+                      {entry.new_end_date && (
+                        <div>
+                          <span className="text-muted-foreground">To:</span>
+                          <div className="font-medium">
+                            {new Date(entry.new_end_date).toLocaleDateString()}
+                          </div>
+                        </div>
+                      )}
+                      {entry.days_added && (
+                        <div className="col-span-2">
+                          <span className="text-muted-foreground">Days Added:</span>
+                          <div className="font-medium">{entry.days_added} days</div>
+                        </div>
+                      )}
+                      {entry.code_used && (
+                        <div className="col-span-2">
+                          <span className="text-muted-foreground">Code:</span>
+                          <div className="font-medium font-mono text-xs">{entry.code_used}</div>
+                        </div>
+                      )}
+                      {entry.termination_reason && (
+                        <div className="col-span-2">
+                          <span className="text-muted-foreground">Reason:</span>
+                          <div className="font-medium">{entry.termination_reason}</div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Quick Actions */}
@@ -355,6 +462,32 @@ export default function SchoolDetailsPage() {
           </div>
         </div>
       </div>
+
+      {/* Extend Subscription Modal */}
+      <ExtendSubscriptionModal
+        open={extendModalOpen}
+        onOpenChange={setExtendModalOpen}
+        schoolId={school.id}
+        currentEndDate={endDate}
+        onSuccess={() => {
+          refetchTimer();
+          fetchSchoolData();
+          setExtendModalOpen(false);
+        }}
+      />
+
+      {/* Terminate Subscription Modal */}
+      <TerminateSubscriptionModal
+        open={terminateModalOpen}
+        onOpenChange={setTerminateModalOpen}
+        schoolId={school.id}
+        schoolName={school.name}
+        onSuccess={() => {
+          refetchTimer();
+          fetchSchoolData();
+          setTerminateModalOpen(false);
+        }}
+      />
     </DashboardLayout>
   );
 }

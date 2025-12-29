@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Plus, Search, Upload, MoreVertical, Eye, Edit, Trash2, Loader2 } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
@@ -40,6 +41,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { StudentForm } from "@/components/forms/StudentForm";
 
 export default function StudentsPage() {
+  const navigate = useNavigate();
   const { profile } = useAuth();
   const { data: students = [], isLoading } = useStudents();
   const { data: classes = [] } = useClasses();
@@ -288,7 +290,7 @@ export default function StudentsPage() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => navigate(`/school-admin/students/${student.id}`)}>
                               <Eye className="h-4 w-4 mr-2" />
                               View Details
                             </DropdownMenuItem>

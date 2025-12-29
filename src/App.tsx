@@ -13,6 +13,7 @@ import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import SchoolActivation from "./pages/SchoolActivation";
+import SchoolInactivePage from "./pages/SchoolInactive";
 import NotFound from "./pages/NotFound";
 
 
@@ -24,11 +25,15 @@ import SubscriptionVerify from "./pages/SubscriptionVerify";
 import SuperAdminDashboard from "./pages/super-admin/Dashboard";
 import SchoolsPage from "./pages/super-admin/Schools";
 import SchoolDetailsPage from "./pages/super-admin/SchoolDetails";
+import SchoolEditPage from "./pages/super-admin/SchoolEdit";
 import AnalyticsPage from "./pages/super-admin/Analytics";
 import SuperAdminSettingsPage from "./pages/super-admin/Settings";
 import PlansPage from "./pages/super-admin/Plans";
 import PlanDetail from "./pages/super-admin/PlanDetail";
 import CodesPage from "./pages/super-admin/Codes";
+import SuperAdminStudentsPage from "./pages/super-admin/Students";
+import SuperAdminClassesPage from "./pages/super-admin/Classes";
+import SuperAdminTeachersPage from "./pages/super-admin/Teachers";
 
 // School Admin Pages
 import SchoolAdminDashboard from "./pages/school-admin/Dashboard";
@@ -40,6 +45,8 @@ import SubjectsPage from "./pages/school-admin/Subjects";
 import AttendancePage from "./pages/school-admin/Attendance";
 import ReportsPage from "./pages/school-admin/Reports";
 import SchoolSettingsPage from "./pages/school-admin/Settings";
+import ClassDetailPage from "./pages/school-admin/ClassDetail";
+import StudentDetailPage from "./pages/school-admin/StudentDetail";
 
 // Teacher Pages
 import TeacherDashboard from "./pages/teacher/Dashboard";
@@ -62,9 +69,7 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <AuthProvider>
-            <UserPresenceProvider>
-              <VideoStreamProvider>
-                <Routes>
+            <Routes>
               {/* Public Routes */}
               <Route path="/" element={<Index />} />
               <Route path="/login" element={<Login />} />
@@ -74,6 +79,7 @@ const App = () => (
               <SchoolActivation />
               </ProtectedRoute>
               } />
+              <Route path="/school-inactive" element={<SchoolInactivePage />} />
 
               {/* Subscription Routes - Checkout is PUBLIC, Verify requires auth */}
               <Route path="/subscription/checkout" element={<SubscriptionCheckout />} />
@@ -97,6 +103,26 @@ const App = () => (
               <Route path="/super-admin/schools/:id" element={
                 <ProtectedRoute allowedRoles={['super_admin']}>
                   <SchoolDetailsPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/super-admin/schools/:id/edit" element={
+                <ProtectedRoute allowedRoles={['super_admin']}>
+                  <SchoolEditPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/super-admin/schools/:id/students" element={
+                <ProtectedRoute allowedRoles={['super_admin']}>
+                  <SuperAdminStudentsPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/super-admin/schools/:id/teachers" element={
+                <ProtectedRoute allowedRoles={['super_admin']}>
+                  <SuperAdminTeachersPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/super-admin/schools/:id/classes" element={
+                <ProtectedRoute allowedRoles={['super_admin']}>
+                  <SuperAdminClassesPage />
                 </ProtectedRoute>
               } />
               <Route path="/super-admin/analytics" element={
@@ -124,8 +150,28 @@ const App = () => (
                   <CodesPage />
                 </ProtectedRoute>
               } />
+              <Route path="/admin/students" element={
+                <ProtectedRoute allowedRoles={['super_admin']}>
+                  <SuperAdminStudentsPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/admin/classes" element={
+                <ProtectedRoute allowedRoles={['super_admin']}>
+                  <SuperAdminClassesPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/admin/teachers" element={
+                <ProtectedRoute allowedRoles={['super_admin']}>
+                  <SuperAdminTeachersPage />
+                </ProtectedRoute>
+              } />
 
               {/* School Admin Routes */}
+              <Route path="/school-admin/activate" element={
+                <ProtectedRoute allowedRoles={['school_admin']}>
+                  <SchoolActivation />
+                </ProtectedRoute>
+              } />
               <Route path="/school-admin/dashboard" element={
                 <ProtectedRoute allowedRoles={['school_admin']}>
                   <SchoolAdminDashboard />
@@ -149,6 +195,16 @@ const App = () => (
               <Route path="/school-admin/classes" element={
                 <ProtectedRoute allowedRoles={['school_admin']}>
                   <ClassesPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/school-admin/classes/:classId" element={
+                <ProtectedRoute allowedRoles={['school_admin']}>
+                  <ClassDetailPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/school-admin/students/:studentId" element={
+                <ProtectedRoute allowedRoles={['school_admin']}>
+                  <StudentDetailPage />
                 </ProtectedRoute>
               } />
               <Route path="/school-admin/subjects" element={
@@ -244,8 +300,6 @@ const App = () => (
               {/* Catch-all */}
               <Route path="*" element={<NotFound />} />
             </Routes>
-              </VideoStreamProvider>
-            </UserPresenceProvider>
           </AuthProvider>
         </BrowserRouter>
       </TooltipProvider>

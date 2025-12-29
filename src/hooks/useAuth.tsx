@@ -37,7 +37,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   // Fetch user profile and role
-  const fetchProfile = async (userId: string, retries = 3) => {
+  const fetchProfile = async (userId: string, retries = 1) => {
     try {
       // Get profile with super admin flag
       const { data: profileData, error: profileError } = await supabase
@@ -55,10 +55,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       if (!profileData) {
-        // Profile doesn't exist yet - might be new user, retry
+        // Profile doesn't exist yet - might be new user, retry once only
         if (retries > 0) {
-          console.log('Profile not found, retrying in 1 second...');
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          console.log('Profile not found, retrying...');
+          await new Promise(resolve => setTimeout(resolve, 500));
           return fetchProfile(userId, retries - 1);
         }
         setProfile(null);
@@ -114,17 +114,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Initialize auth state
   useEffect(() => {
-    // Set up auth state listener FIRST
+    let mounted = true;
+
+    // Set hard timeout to prevent infinite loading
+    const timeout = setTimeout(() => {
+      if (mounted) setIsLoading(false);
+    }, 2000);
+
+    // Set up auth state listener - this handles everything
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+      (event, session) => {
+        if (!mounted) return;
+
         setSession(session);
         setUser(session?.user ?? null);
 
         if (session?.user) {
-          // Defer data fetching with setTimeout
-          setTimeout(() => {
-            fetchProfile(session.user.id);
-          }, 0);
+          // Fetch profile non-blocking
+          fetchProfile(session.user.id).catch(err => {
+            console.error('Error fetching profile:', err);
+          });
         } else {
           setProfile(null);
           setSchoolMembership(null);
@@ -141,21 +150,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     );
 
-    // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-
-      if (session?.user) {
-        fetchProfile(session.user.id).finally(() => {
-          setIsLoading(false);
-        });
-      } else {
-        setIsLoading(false);
-      }
-    });
-
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      clearTimeout(timeout);
+      subscription.unsubscribe();
+    };
   }, []);
 
   // Sign in function
@@ -170,7 +169,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     if (data.user) {
-      await fetchProfile(data.user.id);
+      // Fetch profile non-blocking, don't wait for it
+      fetchProfile(data.user.id).catch(err => {
+        console.error('Error fetching profile after sign in:', err);
+      });
     }
 
     return { error: null };

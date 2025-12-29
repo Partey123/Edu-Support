@@ -5,7 +5,21 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Edu Support Design System - Premium Glassmorphic Theme */
+/* Ensure proper rendering on all devices */
+@layer base {
+  html, body, #root {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    -webkit-font-smoothing: antialiased;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    overflow-x: hidden;
+  }
+}
 
 @layer base {
   :root {

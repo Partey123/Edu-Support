@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Building, Users, TrendingUp, GraduationCap, Plus, Search, MoreVertical, CheckCircle, AlertCircle, Loader2 } from "lucide-react";
+import { Building, Users, TrendingUp, GraduationCap, Plus, Search, MoreVertical, CheckCircle, AlertCircle, Loader2, Clock, Zap, Trash2 } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { Button } from "@/components/ui/button";
@@ -19,15 +19,36 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { SubscriptionTimerBadge } from "@/components/subscription/SubscriptionTimerBadge";
+import { ExtendSubscriptionModal } from "@/components/subscription/ExtendSubscriptionModal";
+import { TerminateSubscriptionModal } from "@/components/subscription/TerminateSubscriptionModal";
+import { useSubscriptionTimer } from "@/hooks/useSubscriptionTimer";
 
 export default function SuperAdminDashboard() {
   const { isSuperAdmin, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
+  const [subscriptionFilter, setSubscriptionFilter] = useState<'all' | 'active' | 'expiring_soon' | 'expired' | 'terminated'>('all');
+  const [extendModalSchool, setExtendModalSchool] = useState<{ id: string; name: string; endDate: Date | null } | null>(null);
+  const [terminateModalSchool, setTerminateModalSchool] = useState<{ id: string; name: string } | null>(null);
 
   // Fetch data using custom hooks
   const { data: stats, isLoading: statsLoading, error: statsError } = useSuperAdminOverview();
-  const { data: schools, isLoading: schoolsLoading, error: schoolsError } = useSuperAdminSchools(searchTerm);
+  const { data: schools, isLoading: schoolsLoading, error: schoolsError, refetch: refetchSchools } = useSuperAdminSchools(searchTerm);
+
+  // Component to render subscription timer for each school
+  const SchoolSubscriptionCell = ({ schoolId }: { schoolId: string }) => {
+    const { timeRemaining, subscriptionStatus, endDate, isLoading } = useSubscriptionTimer(schoolId);
+    
+    return (
+      <SubscriptionTimerBadge
+        timeRemaining={timeRemaining}
+        status={subscriptionStatus}
+        isTerminated={subscriptionStatus === 'terminated'}
+        isLoading={isLoading}
+      />
+    );
+  };
 
   // Redirect if not super admin
   useEffect(() => {
@@ -195,6 +216,12 @@ export default function SuperAdminDashboard() {
                     <th className="text-left p-4 text-sm font-semibold text-muted-foreground">Teachers</th>
                     <th className="text-left p-4 text-sm font-semibold text-muted-foreground">Classes</th>
                     <th className="text-left p-4 text-sm font-semibold text-muted-foreground">Status</th>
+                    <th className="text-left p-4 text-sm font-semibold text-muted-foreground">
+                      <div className="flex items-center gap-2">
+                        <Clock className="h-4 w-4" />
+                        Subscription
+                      </div>
+                    </th>
                     <th className="text-left p-4 text-sm font-semibold text-muted-foreground">Actions</th>
                   </tr>
                 </thead>
@@ -247,6 +274,9 @@ export default function SuperAdminDashboard() {
                         </div>
                       </td>
                       <td className="p-4">
+                        <SchoolSubscriptionCell schoolId={school.id} />
+                      </td>
+                      <td className="p-4">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="icon">
@@ -261,13 +291,24 @@ export default function SuperAdminDashboard() {
                               Edit School
                             </DropdownMenuItem>
                             <DropdownMenuItem 
-                              className="text-destructive"
-                              onClick={() => {
-                                // TODO: Implement delete/deactivate
-                                console.log('Deactivate school:', school.id);
-                              }}
+                              onClick={() => setExtendModalSchool({ 
+                                id: school.id, 
+                                name: school.name, 
+                                endDate: null 
+                              })}
                             >
-                              Deactivate
+                              <Zap className="h-4 w-4 mr-2" />
+                              Extend Subscription
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              className="text-destructive"
+                              onClick={() => setTerminateModalSchool({ 
+                                id: school.id, 
+                                name: school.name 
+                              })}
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Terminate
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -295,6 +336,38 @@ export default function SuperAdminDashboard() {
           </>
         )}
       </div>
+
+      {/* Extend Subscription Modal */}
+      {extendModalSchool && (
+        <ExtendSubscriptionModal
+          open={true}
+          onOpenChange={(open) => {
+            if (!open) setExtendModalSchool(null);
+          }}
+          schoolId={extendModalSchool.id}
+          currentEndDate={extendModalSchool.endDate}
+          onSuccess={() => {
+            refetchSchools();
+            setExtendModalSchool(null);
+          }}
+        />
+      )}
+
+      {/* Terminate Subscription Modal */}
+      {terminateModalSchool && (
+        <TerminateSubscriptionModal
+          open={true}
+          onOpenChange={(open) => {
+            if (!open) setTerminateModalSchool(null);
+          }}
+          schoolId={terminateModalSchool.id}
+          schoolName={terminateModalSchool.name}
+          onSuccess={() => {
+            refetchSchools();
+            setTerminateModalSchool(null);
+          }}
+        />
+      )}
     </DashboardLayout>
   );
 }
